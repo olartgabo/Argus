@@ -1,0 +1,6 @@
+build/
+docs/
+context.md
+__pycache__/
+*.pyc
+.env
