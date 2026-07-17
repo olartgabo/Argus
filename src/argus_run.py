@@ -7,6 +7,7 @@ persist seen ids.
 Runs as a single Lambda (argus-run). No dependencies beyond boto3/stdlib.
 """
 
+import html
 import json
 import os
 import time
@@ -229,19 +230,26 @@ def fallback_digest(items):
 
 # ---------------------------------------------------------------- render + send
 
+def safe_url(url):
+    """Item titles/urls come from public registries and model output — treat as hostile."""
+    return url if isinstance(url, str) and url.startswith(("https://", "http://")) else "#"
+
+
 def render_html(digest, date_str, total_new):
+    esc = html.escape
     parts = [
-        f"<h2 style='margin-bottom:4px'>ARGUS &mdash; MCP digest, {date_str}</h2>",
-        f"<p style='color:#555'>{digest.get('headline', '')}</p>",
+        f"<h2 style='margin-bottom:4px'>ARGUS &mdash; MCP digest, {esc(date_str)}</h2>",
+        f"<p style='color:#555'>{esc(str(digest.get('headline', '')))}</p>",
     ]
     for section in digest.get("sections", []):
         if not section.get("items"):
             continue
-        parts.append(f"<h3 style='margin-bottom:2px'>{section['title']}</h3><ul>")
+        parts.append(f"<h3 style='margin-bottom:2px'>{esc(str(section['title']))}</h3><ul>")
         for it in section["items"]:
             parts.append(
-                f"<li style='margin-bottom:6px'><a href='{it['url']}'>{it['title']}</a>"
-                f"<br><span style='color:#555;font-size:13px'>{it.get('why', '')}</span></li>")
+                f"<li style='margin-bottom:6px'><a href=\"{esc(safe_url(it.get('url')), quote=True)}\">"
+                f"{esc(str(it.get('title', '')))}</a>"
+                f"<br><span style='color:#555;font-size:13px'>{esc(str(it.get('why', '')))}</span></li>")
         parts.append("</ul>")
     parts.append(
         f"<hr><p style='color:#999;font-size:12px'>{total_new} new items scanned &middot; "
